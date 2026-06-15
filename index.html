@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#0e1320; --surface:#19212f; --surface2:#222c3d; --line:#2c3849;
@@ -247,6 +248,41 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
   .lvlinfo .bar{width:min(420px,80vw)}
   .path{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:11px}
 }
+
+/* cuenta */
+.acct{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);
+  padding:7px 9px 7px 13px;border-radius:13px;color:var(--text);font-weight:700;font-size:.92rem}
+.acct .lo{background:var(--surface2);color:var(--muted);padding:5px 10px;border-radius:9px;font-size:.8rem;font-weight:800}
+.acct .lo:hover{color:var(--text)}
+
+/* leaderboard */
+.lb{margin-top:34px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px 22px}
+.lb h3{font-size:1.15rem;font-weight:900}
+.lb .hint{color:var(--muted);font-size:.88rem;margin:4px 0 14px}
+.lbrow{display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:12px;background:var(--surface2);margin-bottom:8px}
+.lbrow.me{border:1px solid var(--brand);background:rgba(139,155,255,.1)}
+.lbrow .rank{font-family:'Nunito';font-weight:900;width:26px;text-align:center;color:var(--muted)}
+.lbrow:nth-child(1) .rank{color:var(--gold)}
+.lbrow .who{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbrow .lbxp{font-family:'Nunito';font-weight:900;color:var(--gold)}
+.lbrow .lbst{color:var(--flame);font-weight:800;font-size:.9rem}
+
+/* gate / login */
+.gate{position:fixed;inset:0;z-index:90;background:radial-gradient(1000px 500px at 50% -10%,#182236,#0b1018);
+  display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:30px 26px;max-width:400px;width:100%;box-shadow:var(--shadow);text-align:center}
+.gate-card h2{font-size:1.6rem;font-weight:900}
+.gate-sub{color:var(--muted);font-size:.95rem;margin:6px 0 18px}
+.gl{display:block;text-align:left;font-size:.82rem;font-weight:800;color:var(--muted);margin:12px 2px 6px}
+.gi{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;color:var(--text);
+  font-family:'Inter';font-size:1.05rem;padding:13px 14px;outline:none;transition:border-color .15s}
+.gi:focus{border-color:var(--brand)}
+.gerr{margin-top:12px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.32);
+  border-radius:10px;padding:10px 12px;font-size:.88rem;color:#ffb4b4;text-align:left}
+.gtoggle{margin-top:16px;font-size:.9rem;color:var(--muted)}
+.gtoggle button{background:none;color:var(--brand);font-weight:800;text-decoration:underline;font-size:.9rem}
+.gskip{margin-top:20px;background:none;color:var(--muted2);text-decoration:underline;font-size:.85rem;width:100%}
 </style>
 </head>
 <body>
@@ -259,6 +295,7 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
     </div>
     <div class="stat flame"><span class="ic">🔥</span><span id="streakN">0</span></div>
     <div class="stat xp"><span class="ic">⭐</span><span id="xpN">0</span></div>
+    <button class="acct" id="acctChip" hidden><span id="acctName">cuenta</span><span class="lo">Salir</span></button>
   </div>
 </header>
 
@@ -301,6 +338,12 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
     <div class="badge-grid" id="badgeGrid"></div>
   </section>
 
+  <section class="lb" id="lbSection" style="display:none">
+    <h3>🏅 Tabla de posiciones del equipo</h3>
+    <p class="hint">Los que más XP acumulan esta jornada.</p>
+    <div class="lb-body" id="lbBody"></div>
+  </section>
+
   <section class="certcta locked" id="certCta">
     <h3>🏆 Certificado de finalización</h3>
     <p id="certText">Completá 30 días y desbloqueá tu certificado.</p>
@@ -312,6 +355,30 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
     <button id="resetBtn">Reiniciar mi progreso</button>
   </footer>
 </main>
+
+<!-- Login gate -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <div class="logo-mark" style="width:58px;height:58px;font-size:1.9rem;margin:0 auto 14px">🧠</div>
+    <h2 id="gateTitle">Entrá a tu curso</h2>
+    <p class="gate-sub" id="gateSub">Tu progreso se guarda en la nube. Entrá desde cualquier equipo.</p>
+    <div id="gateNameWrap" hidden>
+      <label class="gl">Tu nombre</label>
+      <input class="gi" id="gName" placeholder="Nombre y apellido" autocomplete="name">
+    </div>
+    <label class="gl">Correo</label>
+    <input class="gi" id="gEmail" type="email" placeholder="tucorreo@empresa.com" autocomplete="email">
+    <label class="gl">Contraseña</label>
+    <input class="gi" id="gPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <div class="gerr" id="gErr" hidden></div>
+    <button class="btn big" id="gBtn" style="margin-top:14px">Entrar</button>
+    <div class="gtoggle">
+      <span id="gToggleTxt">¿Primera vez?</span>
+      <button id="gToggle">Crear cuenta</button>
+    </div>
+    <button class="gskip" id="gSkip">Continuar sin cuenta (solo este equipo)</button>
+  </div>
+</div>
 
 <!-- Lesson modal -->
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
@@ -609,13 +676,84 @@ const SYSTEM_PROMPT =
   'Respondé en español, claro y práctico, sin tecnicismos. Da un borrador útil y ' +
   'recordá brevemente al final que la persona debe revisar y ajustar antes de usarlo.';
 
+/* ===================== CONFIGURACIÓN DE SUPABASE =====================
+   Pegá la URL y la anon key de tu proyecto. Antes corré el SQL que crea
+   la tabla "progress" y sus políticas (ver instrucciones).               */
+const SUPA = {
+  URL:  'https://jslcmzrbonurhsdzuwyx.supabase.co',
+  ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzbGNtenJib251cmhzZHp1d3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NDUyMTEsImV4cCI6MjA5NzAyMTIxMX0.QTjZfJlxaYiY1CxJWbKbCyFwL--kxbDpVRzwxsCDGwc'
+};
+
 const KEY='iatr_progress_v1';
+let sb=null, user=null, cloud=false, displayName='';
+
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return s;}catch(e){}
-  return {done:[], xp:0, streak:0, last:null, evals:{}};
+  return {done:[], xp:0, streak:0, last:null, _maxStreak:0, evals:{}};
 }
-function save(){localStorage.setItem(KEY, JSON.stringify(S));}
+function saveLocal(){localStorage.setItem(KEY, JSON.stringify(S));}
+function save(){
+  saveLocal();
+  if(cloud){ pushCloud().then(()=>renderLeaderboard()).catch(()=>{}); }
+}
 let S = load();
+
+/* --- sincronización con la nube (combina, nunca pisa) --- */
+function mergeState(a, b){
+  const done = Array.from(new Set([...(a.done||[]), ...(b.done||[])])).sort((x,y)=>x-y);
+  return {
+    done,
+    xp: Math.max(a.xp||0, b.xp||0),
+    streak: Math.max(a.streak||0, b.streak||0),
+    _maxStreak: Math.max(a._maxStreak||0, b._maxStreak||0),
+    last: ((a.last||'') > (b.last||'')) ? a.last : (b.last||a.last),
+    evals:{}
+  };
+}
+async function fetchCloud(){
+  const {data}=await sb.from('progress').select('done,xp,streak,max_streak,last_date,display_name')
+    .eq('user_id',user.id).maybeSingle();
+  return data;
+}
+async function pushCloud(){
+  if(!cloud||!user||!sb) return;
+  // traemos lo que hay en la nube y lo combinamos antes de subir, para no borrar el avance del otro equipo
+  const data = await fetchCloud();
+  if(data){
+    S = mergeState(S, {done:data.done||[], xp:data.xp||0, streak:data.streak||0,
+                       _maxStreak:data.max_streak||0, last:data.last_date||null});
+    saveLocal();
+  }
+  await sb.from('progress').upsert({
+    user_id:user.id, display_name:displayName,
+    done:S.done, xp:S.xp, streak:S.streak, max_streak:S._maxStreak||0,
+    last_date:S.last, updated_at:new Date().toISOString()
+  });
+}
+async function loadCloud(){
+  const data = await fetchCloud();
+  if(data){
+    // combinamos nube + lo de este equipo, así ningún lado pierde días
+    S = mergeState(S, {done:data.done||[], xp:data.xp||0, streak:data.streak||0,
+                       _maxStreak:data.max_streak||0, last:data.last_date||null});
+    displayName = data.display_name || displayName;
+    saveLocal();
+    await pushCloud();   // dejamos la nube al día con el resultado combinado
+  }else{
+    displayName = displayName || user.user_metadata?.display_name || user.email.split('@')[0];
+    await pushCloud();
+  }
+}
+async function renderLeaderboard(){
+  const sec=document.getElementById('lbSection'), body=document.getElementById('lbBody');
+  if(!cloud||!sb){ sec.style.display='none'; return; }
+  sec.style.display='';
+  const {data}=await sb.from('progress').select('display_name,xp,streak').order('xp',{ascending:false}).limit(20);
+  if(!data){ body.innerHTML='<div class="lbrow">No se pudo cargar la tabla.</div>'; return; }
+  body.innerHTML=data.map((r,i)=>`<div class="lbrow ${r.display_name===displayName?'me':''}">
+     <span class="rank">${i+1}</span><span class="who">${escapeHTML(r.display_name||'—')}</span>
+     <span class="lbxp">${r.xp||0} XP</span><span class="lbst">🔥${r.streak||0}</span></div>`).join('');
+}
 
 const todayStr = ()=> new Date().toISOString().slice(0,10);
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
@@ -932,13 +1070,103 @@ function closeCert(){document.getElementById('certOverlay').classList.remove('sh
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeDay();});
 document.getElementById('certOverlay').addEventListener('click',e=>{if(e.target.id==='certOverlay')closeCert();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDay();closeCert();}});
-document.getElementById('resetBtn').addEventListener('click',()=>{
+document.getElementById('resetBtn').addEventListener('click',async()=>{
   if(confirm('¿Seguro que querés borrar todo tu progreso? No se puede deshacer.')){
-    localStorage.removeItem(KEY); S=load(); render();
+    localStorage.removeItem(KEY); S=load();
+    if(cloud) await pushCloud();
+    render(); renderLeaderboard();
   }
 });
 
-render();
+/* ===================== AUTENTICACIÓN ===================== */
+let gateMode='in'; // 'in' = entrar, 'up' = crear cuenta
+const $=id=>document.getElementById(id);
+function showGate(){ $('gate').hidden=false; document.body.style.overflow='hidden'; }
+function hideGate(){ $('gate').hidden=true; document.body.style.overflow=''; }
+function gateErr(msg){ const e=$('gErr'); e.hidden=!msg; e.textContent=msg||''; }
+
+function setAcctChip(){
+  const chip=$('acctChip');
+  if(cloud){ chip.hidden=false; $('acctName').textContent='👤 '+(displayName||'cuenta'); }
+  else chip.hidden=true;
+}
+$('acctChip').addEventListener('click',async()=>{
+  if(confirm('¿Cerrar sesión?')){ if(sb) await sb.auth.signOut(); location.reload(); }
+});
+
+$('gToggle').addEventListener('click',()=>{
+  gateMode = gateMode==='in' ? 'up' : 'in';
+  const up = gateMode==='up';
+  $('gateNameWrap').hidden=!up;
+  $('gateTitle').textContent = up?'Creá tu cuenta':'Entrá a tu curso';
+  $('gBtn').textContent = up?'Crear cuenta':'Entrar';
+  $('gToggleTxt').textContent = up?'¿Ya tenés cuenta?':'¿Primera vez?';
+  $('gToggle').textContent = up?'Entrar':'Crear cuenta';
+  gateErr('');
+});
+
+$('gSkip').addEventListener('click',()=>{ cloud=false; hideGate(); setAcctChip(); render(); });
+
+$('gBtn').addEventListener('click',doAuth);
+[$('gEmail'),$('gPass'),$('gName')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();}));
+
+async function doAuth(){
+  gateErr('');
+  const email=$('gEmail').value.trim(), pass=$('gPass').value, name=$('gName').value.trim();
+  if(!email||!pass){ gateErr('Escribí tu correo y contraseña.'); return; }
+  if(gateMode==='up' && !name){ gateErr('Escribí tu nombre.'); return; }
+  $('gBtn').disabled=true; const t=$('gBtn').textContent; $('gBtn').textContent='Un momento…';
+  try{
+    if(gateMode==='up'){
+      const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name}}});
+      if(error) throw error;
+      if(!data.session){ // requiere confirmación por correo
+        gateErr('Te enviamos un correo para confirmar tu cuenta. Confirmá y luego entrá.');
+        $('gBtn').disabled=false; $('gBtn').textContent=t; return;
+      }
+      user=data.user; displayName=name;
+    }else{
+      const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error) throw error;
+      user=data.user;
+    }
+    cloud=true;
+    await loadCloud();
+    hideGate(); setAcctChip(); render(); renderLeaderboard();
+  }catch(err){
+    const m=(err&&err.message)||'No se pudo completar.';
+    gateErr(/invalid login/i.test(m)?'Correo o contraseña incorrectos.':m);
+    $('gBtn').disabled=false; $('gBtn').textContent=t;
+  }
+}
+
+/* ===================== ARRANQUE ===================== */
+async function init(){
+  // Sin Supabase configurado → modo local de un solo equipo
+  if(SUPA.URL.includes('TU-PROYECTO') || !window.supabase){
+    cloud=false; hideGate(); setAcctChip(); render(); return;
+  }
+  sb=window.supabase.createClient(SUPA.URL,SUPA.ANON);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    user=session.user; cloud=true;
+    displayName=user.user_metadata?.display_name||'';
+    await loadCloud();
+    hideGate(); setAcctChip(); render(); renderLeaderboard();
+  }else{
+    render();          // pinta la ruta detrás
+    showGate();
+  }
+}
+
+/* al volver a la app en un dispositivo, traer lo último de la nube */
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.visibilityState==='visible' && cloud && sb){
+    try{ await loadCloud(); render(); renderLeaderboard(); }catch(e){}
+  }
+});
+
+init();
 </script>
 </body>
 </html>
