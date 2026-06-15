@@ -1183,17 +1183,20 @@ async function init(){
   if(SUPA.URL.includes('TU-PROYECTO') || !window.supabase){
     cloud=false; hideGate(); setAcctChip(); render(); return;
   }
-  sb=window.supabase.createClient(SUPA.URL,SUPA.ANON);
-  const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    user=session.user; cloud=true;
-    displayName=user.user_metadata?.display_name||'';
-    await loadCloud();
-    hideGate(); setAcctChip(); render(); renderLeaderboard();
-  }else{
-    render();          // pinta la ruta detrás
-    showGate();
-  }
+  try{
+    sb=window.supabase.createClient(SUPA.URL,SUPA.ANON);
+    const {data:{session}}=await sb.auth.getSession();
+    if(session && session.user){
+      user=session.user; cloud=true;
+      displayName=user.user_metadata?.display_name||'';
+      hideGate(); setAcctChip(); render();   // entrás YA; la nube se sincroniza aparte
+      try{ await loadCloud(); render(); renderLeaderboard(); }
+      catch(e){ console.warn('Sync al arrancar (entrás igual):', e); }
+      return;
+    }
+  }catch(e){ console.warn('init auth:', e); }
+  render();        // pinta la ruta detrás
+  showGate();
 }
 
 /* al volver a la app en un dispositivo, traer lo último de la nube */
