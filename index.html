@@ -203,6 +203,10 @@ header{
   padding:15px 16px;font-size:1rem;line-height:1.6;color:#dbe5ef;white-space:pre-wrap}
 .airesp .rlabel{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
   color:var(--nc);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.bruno-svg{width:26px;height:26px;border-radius:50%;flex-shrink:0}
+.pl-bruno{display:flex;align-items:center;gap:8px}
+.pl-bruno .bruno-svg{width:30px;height:30px}
+.airesp .rlabel .bruno-svg{width:24px;height:24px}
 .airesp .think{display:inline-flex;gap:5px;align-items:center;color:var(--muted)}
 .airesp .think i{width:8px;height:8px;border-radius:50%;background:var(--nc);animation:blink 1.2s infinite}
 .airesp .think i:nth-child(2){animation-delay:.2s}.airesp .think i:nth-child(3){animation-delay:.4s}
@@ -672,9 +676,27 @@ const CONFIG = {
   MODEL: 'gpt-4o-mini'
 };
 const SYSTEM_PROMPT =
-  'Sos un asistente de trabajo para personal de oficina en Costa Rica. ' +
-  'Respondé en español, claro y práctico, sin tecnicismos. Da un borrador útil y ' +
-  'recordá brevemente al final que la persona debe revisar y ajustar antes de usarlo.';
+  'Te llamás Bruno, el asistente del curso "IA para el Trabajo Real". ' +
+  'Sos cercano, amable y práctico, como un buen compañero de oficina costarricense. ' +
+  'Respondé en español, claro y sin tecnicismos. Da un borrador útil y directo. ' +
+  'No te presentes ni saludes en cada respuesta; andá al grano. ' +
+  'Al final, en una línea corta, recordá con calidez que revise y ajuste antes de usarlo.';
+
+/* Avatar de Bruno (SVG, vive dentro del archivo, no hay que subir imagen) */
+const BRUNO = `<svg class="bruno-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="32" cy="32" r="32" fill="#243044"/>
+  <ellipse cx="15" cy="34" rx="6" ry="12" fill="#a96f2e" transform="rotate(-14 15 34)"/>
+  <ellipse cx="49" cy="34" rx="6" ry="12" fill="#a96f2e" transform="rotate(14 49 34)"/>
+  <ellipse cx="32" cy="33" rx="18" ry="17" fill="#d79a4f"/>
+  <ellipse cx="32" cy="40" rx="11" ry="9" fill="#f2dcb0"/>
+  <circle cx="25.5" cy="30" r="2.7" fill="#2b1f17"/>
+  <circle cx="38.5" cy="30" r="2.7" fill="#2b1f17"/>
+  <circle cx="26.4" cy="29.1" r=".9" fill="#fff"/>
+  <circle cx="39.4" cy="29.1" r=".9" fill="#fff"/>
+  <ellipse cx="32" cy="36.5" rx="3.3" ry="2.5" fill="#2b1f17"/>
+  <path d="M32 39 C32 42 28.5 43 27.5 41.2" stroke="#2b1f17" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M32 39 C32 42 35.5 43 36.5 41.2" stroke="#2b1f17" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>`;
 
 /* ===================== CONFIGURACIÓN DE SUPABASE =====================
    Pegá la URL y la anon key de tu proyecto. Antes corré el SQL que crea
@@ -877,11 +899,11 @@ function openDay(n){
       <div class="block"><div class="k"><span class="em">🏢</span>Ejemplo real de trabajo</div><p>${d.ej}</p></div>
       <div class="block"><div class="k"><span class="em">✍️</span>Ejercicio práctico</div><p>${d.ec}</p>
         <div class="promptbox">
-          <div class="pl">Practicá aquí mismo</div>
-          <textarea class="pinput" id="promptInput" rows="3" aria-label="Prompt para enviar a la IA">${d.p}</textarea>
+          <div class="pl pl-bruno">${BRUNO}<span>Practicá con Bruno</span></div>
+          <textarea class="pinput" id="promptInput" rows="3" aria-label="Prompt para enviar a Bruno">${d.p}</textarea>
           <div class="phint"><span>✏️</span><span>Editá el prompt y reemplazá lo que está en [corchetes] con tus datos. Personalizarlo es parte del ejercicio.</span></div>
           <div class="prow">
-            <button class="sendb" id="sendB">✨ Enviar a la IA</button>
+            <button class="sendb" id="sendB">🐶 Preguntarle a Bruno</button>
             <button class="copyb2" id="copyB">📋 Copiar</button>
           </div>
           <div class="airesp" id="aiResp" hidden></div>
@@ -949,7 +971,7 @@ async function askAI(){
   }
 
   resp.hidden=false;
-  resp.innerHTML='<div class="rlabel">🤖 Asistente</div><span class="think"><i></i><i></i><i></i> Pensando…</span>';
+  resp.innerHTML='<div class="rlabel">'+BRUNO+'Bruno</div><span class="think"><i></i><i></i><i></i> Bruno está pensando…</span>';
   btn.disabled=true; const old=btn.textContent; btn.textContent='Enviando…';
 
   try{
@@ -978,9 +1000,9 @@ async function askAI(){
     if(!text){throw new Error('Respuesta vacía o en formato inesperado');}
 
     resp.innerHTML=
-      '<div class="rlabel">🤖 Asistente</div>'+
+      '<div class="rlabel">'+BRUNO+'Bruno</div>'+
       '<div>'+escapeHTML(text.trim())+'</div>'+
-      '<div class="reviewnote"><span>🚫</span><span><b>Revisá antes de usar.</b> La IA se puede equivocar: corregí datos, nombres y el tono para que suene a vos.</span></div>';
+      '<div class="reviewnote"><span>🚫</span><span><b>Revisá antes de usar.</b> Bruno se puede equivocar: corregí datos, nombres y el tono para que suene a vos.</span></div>';
   }catch(err){
     resp.innerHTML=
       '<div class="rlabel">⚠️ No se pudo conectar</div>'+
