@@ -746,11 +746,12 @@ async function pushCloud(){
                        _maxStreak:data.max_streak||0, last:data.last_date||null});
     saveLocal();
   }
-  await sb.from('progress').upsert({
+  const { error } = await sb.from('progress').upsert({
     user_id:user.id, display_name:displayName,
     done:S.done, xp:S.xp, streak:S.streak, max_streak:S._maxStreak||0,
     last_date:S.last, updated_at:new Date().toISOString()
-  });
+  }, { onConflict:'user_id' });
+  if(error) console.warn('pushCloud:', error.message||error);
 }
 async function loadCloud(){
   const data = await fetchCloud();
@@ -1137,13 +1138,19 @@ async function doAuth(){
   const email=$('gEmail').value.trim(), pass=$('gPass').value, name=$('gName').value.trim();
   if(!email||!pass){ gateErr('Escribí tu correo y contraseña.'); return; }
   if(gateMode==='up' && !name){ gateErr('Escribí tu nombre.'); return; }
-  $('gBtn').disabled=true; const t=$('gBtn').textContent; $('gBtn').textContent='Un momento…';
+  const t = gateMode==='up' ? 'Crear cuenta' : 'Entrar';
+  $('gBtn').disabled=true; $('gBtn').textContent='Un momento…';
   try{
     if(gateMode==='up'){
       const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{display_name:name}}});
       if(error) throw error;
-      if(!data.session){ // requiere confirmación por correo
-        gateErr('Te enviamos un correo para confirmar tu cuenta. Confirmá y luego entrá.');
+      // correo ya registrado (Supabase devuelve identities vacío)
+      if(data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+        gateErr('Ese correo ya tiene cuenta. Tocá «Entrar» en lugar de «Crear cuenta».');
+        $('gBtn').disabled=false; $('gBtn').textContent=t; return;
+      }
+      if(!data.session){
+        gateErr('Te enviamos un correo para confirmar tu cuenta. Confirmá y luego entrá. (O apagá la confirmación de correo en Supabase para entrar de una.)');
         $('gBtn').disabled=false; $('gBtn').textContent=t; return;
       }
       user=data.user; displayName=name;
@@ -1151,13 +1158,21 @@ async function doAuth(){
       const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
       if(error) throw error;
       user=data.user;
+      displayName = user.user_metadata?.display_name || displayName;
     }
+    // ya autenticada: entramos de una. La nube se sincroniza aparte y nunca bloquea el ingreso.
     cloud=true;
-    await loadCloud();
-    hideGate(); setAcctChip(); render(); renderLeaderboard();
+    hideGate(); setAcctChip(); render();
+    try{ await loadCloud(); render(); renderLeaderboard(); }
+    catch(e){ console.warn('Sync con la nube falló (entrás igual):', e); }
   }catch(err){
     const m=(err&&err.message)||'No se pudo completar.';
-    gateErr(/invalid login/i.test(m)?'Correo o contraseña incorrectos.':m);
+    let amable = m;
+    if(/invalid login/i.test(m)) amable='Correo o contraseña incorrectos.';
+    else if(/already registered|already exists/i.test(m)) amable='Ese correo ya tiene cuenta. Tocá «Entrar».';
+    else if(/email not confirmed/i.test(m)) amable='La cuenta no está confirmada. Apagá la confirmación de correo en Supabase y volvé a entrar.';
+    gateErr(amable);
+  }finally{
     $('gBtn').disabled=false; $('gBtn').textContent=t;
   }
 }
