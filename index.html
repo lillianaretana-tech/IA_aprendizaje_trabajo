@@ -358,6 +358,8 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
   <footer>
     Lilliana Retana Tech · IA para el Trabajo Real<br>
     <button id="resetBtn">Reiniciar mi progreso</button>
+    <span style="margin:0 8px;opacity:.4">·</span>
+    <button id="ownerBtn">Modo dueña</button>
   </footer>
 </main>
 
@@ -783,8 +785,9 @@ const todayStr = ()=> new Date().toISOString().slice(0,10);
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
 
 /* ===================== RENDER ===================== */
+let ownerMode = false;   // Modo dueña: desbloquea los 30 días solo en este equipo
 function isDone(n){return S.done.includes(n);}
-function isAvailable(n){return n===1 || isDone(n-1);}
+function isAvailable(n){return ownerMode || n===1 || isDone(n-1);}
 function maxAvailable(){let m=1;for(let i=1;i<=30;i++){if(isDone(i))m=i+1;}return Math.min(m,30);}
 
 function currentMastery(){return MASTERY.find(m=>S.xp>=m.min&&S.xp<=m.max)||MASTERY[MASTERY.length-1];}
@@ -1099,6 +1102,22 @@ document.getElementById('resetBtn').addEventListener('click',async()=>{
     localStorage.removeItem(KEY); S=load();
     if(cloud) await pushCloud();
     render(); renderLeaderboard();
+  }
+});
+
+/* Modo dueña: desbloquea los 30 días para revisar. Solo en este equipo,
+   no toca el progreso ni la nube. Se apaga al recargar. */
+document.getElementById('ownerBtn').addEventListener('click',()=>{
+  ownerMode=!ownerMode;
+  document.getElementById('ownerBtn').textContent = ownerMode ? '🔓 Modo dueña: ACTIVO' : 'Modo dueña';
+  render();
+  if(ownerMode){
+    const tEl=document.getElementById('toast');
+    tEl.style.borderColor='var(--gold)';
+    document.getElementById('toastEm').textContent='🔓';
+    document.getElementById('toastT').textContent='Modo dueña activado';
+    document.getElementById('toastS').textContent='Los 30 días están desbloqueados para revisar (solo en este equipo).';
+    tEl.classList.add('show'); setTimeout(()=>tEl.classList.remove('show'),3600);
   }
 });
 
