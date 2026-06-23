@@ -295,7 +295,7 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
 <header>
   <div class="wrap hbar">
     <div class="logo">
-      <div class="logo-mark">🧠</div>
+      <div class="logo-mark" id="brainLogo">🧠</div>
       <div><h1>IA para el Trabajo Real</h1><p>15 minutos al día · 30 días</p></div>
     </div>
     <div class="stat flame"><span class="ic">🔥</span><span id="streakN">0</span></div>
@@ -358,8 +358,6 @@ footer button{background:none;color:var(--muted2);text-decoration:underline;font
   <footer>
     Lilliana Retana Tech · IA para el Trabajo Real<br>
     <button id="resetBtn">Reiniciar mi progreso</button>
-    <span style="margin:0 8px;opacity:.4">·</span>
-    <button id="ownerBtn">Modo dueña</button>
   </footer>
 </main>
 
@@ -1105,18 +1103,25 @@ document.getElementById('resetBtn').addEventListener('click',async()=>{
   }
 });
 
-/* Modo dueña: desbloquea los 30 días para revisar. Solo en este equipo,
-   no toca el progreso ni la nube. Se apaga al recargar. */
-document.getElementById('ownerBtn').addEventListener('click',()=>{
-  ownerMode=!ownerMode;
-  document.getElementById('ownerBtn').textContent = ownerMode ? '🔓 Modo dueña: ACTIVO' : 'Modo dueña';
-  render();
-  if(ownerMode){
+/* Modo dueña: se activa tocando el cerebro 🧠 del encabezado 5 veces seguidas.
+   Desbloquea los 30 días para revisar. Solo en este equipo, no toca el progreso
+   ni la nube. Se apaga al recargar (o tocando 5 veces de nuevo). */
+let brainTaps=0, brainTimer=null;
+document.getElementById('brainLogo').addEventListener('click',()=>{
+  brainTaps++;
+  clearTimeout(brainTimer);
+  brainTimer=setTimeout(()=>{brainTaps=0;},1500); // si te detenés, se reinicia el conteo
+  if(brainTaps>=5){
+    brainTaps=0;
+    ownerMode=!ownerMode;
+    render();
     const tEl=document.getElementById('toast');
     tEl.style.borderColor='var(--gold)';
-    document.getElementById('toastEm').textContent='🔓';
-    document.getElementById('toastT').textContent='Modo dueña activado';
-    document.getElementById('toastS').textContent='Los 30 días están desbloqueados para revisar (solo en este equipo).';
+    document.getElementById('toastEm').textContent = ownerMode?'🔓':'🔒';
+    document.getElementById('toastT').textContent = ownerMode?'Modo dueña activado':'Modo dueña desactivado';
+    document.getElementById('toastS').textContent = ownerMode
+      ? 'Los 30 días están desbloqueados para revisar (solo en este equipo).'
+      : 'Volviste al modo normal.';
     tEl.classList.add('show'); setTimeout(()=>tEl.classList.remove('show'),3600);
   }
 });
