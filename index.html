@@ -714,6 +714,50 @@ const SUPA = {
 const KEY='iatr_progress_v1';
 let sb=null, user=null, cloud=false, displayName='';
 
+/* ===== LillyTech Core — analítica central (no bloquea la app) ===== */
+const CORE = {
+  URL: 'https://vgkyoyosjewdygxtnqvu.supabase.co',
+  ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZna3lveW9zamV3ZHlneHRucXZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NTAxNDAsImV4cCI6MjA5ODIyNjE0MH0.oDxSWg61UFLqMh2MeEW6yxarZAjobhEA6TWm0KS_7CA',
+  COMPANY_ID: '2821771b-aa0b-40c0-92eb-c42fc384e96a',
+  APP_KEY: 'ia_trabajo_real',
+  COURSE_KEY: 'core_foundations',
+  ACADEMIA: 'IA para el Trabajo Real'
+};
+let coreSb=null, coreReported=false;
+async function reportFinalToCore(){
+  try{
+    if(coreReported) return;                 // evitar duplicados en la sesión
+    if(!cloud || !user || !user.email) return; // sin sesión en la nube: no se reporta
+    if(!window.supabase) return;
+    if(!coreSb) coreSb=window.supabase.createClient(CORE.URL, CORE.ANON);
+    let ids=reportFinalToCore._ids;
+    if(!ids){
+      const appRes=await coreSb.from('apps').select('id').eq('app_key',CORE.APP_KEY).maybeSingle();
+      const appId=appRes.data?appRes.data.id:null;
+      let courseId=null;
+      if(appId){
+        const cRes=await coreSb.from('courses').select('id').eq('app_id',appId).eq('course_key',CORE.COURSE_KEY).maybeSingle();
+        courseId=cRes.data?cRes.data.id:null;
+      }
+      ids=reportFinalToCore._ids={appId,courseId};
+    }
+    let profileId=null;
+    const pRes=await coreSb.from('users_profile').select('id').eq('company_id',CORE.COMPANY_ID).eq('email',user.email).maybeSingle();
+    if(pRes.data){ profileId=pRes.data.id; }
+    else{
+      const iRes=await coreSb.from('users_profile').insert({company_id:CORE.COMPANY_ID,email:user.email,full_name:(displayName||user.email),status:'active'}).select('id').maybeSingle();
+      profileId=iRes.data?iRes.data.id:null;
+    }
+    const base={app_id:ids.appId,course_id:ids.courseId,user_profile_id:profileId,company_id:CORE.COMPANY_ID,source_app:CORE.APP_KEY};
+    await coreSb.from('analytics_events').insert([
+      {...base,event_type:'course_completed',      metadata:{academia:CORE.ACADEMIA}},
+      {...base,event_type:'certificate_generated', metadata:{academia:CORE.ACADEMIA}}
+    ]);
+    coreReported=true;
+  }catch(e){ console.warn('reportFinalToCore:',e); }
+}
+
+
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return s;}catch(e){}
   return {done:[], xp:0, streak:0, last:null, _maxStreak:0, evals:{}};
@@ -1065,6 +1109,8 @@ function completeDay(){
 
 /* ===================== CERTIFICADO ===================== */
 function openCert(){
+  // avisar al Core (no bloquea): completó el curso de 30 días
+  reportFinalToCore();
   const m=currentMastery();
   const sheet=document.getElementById('certSheet');
   sheet.innerHTML=`
